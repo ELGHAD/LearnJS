@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Task Tracker — DOM + localStorage</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --bg:#0f172a; --card:#111827; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee; --danger:#ef4444; --ok:#22c55e; }
+    *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;background:linear-gradient(120deg,#0b1224,#0f172a);color:var(--text);min-height:100vh;display:grid;place-items:start}
+    .wrap{width:min(900px,92%);margin:40px auto}
+    .title{display:flex;align-items:center;gap:12px}
+    .title h1{margin:0;font-size:28px;letter-spacing:.5px}
+    .badge{background:rgba(34,211,238,.15);color:var(--accent);padding:4px 10px;border-radius:999px;font-size:12px;border:1px solid rgba(34,211,238,.35)}
+    .card{background:var(--card);border:1px solid #1f2937;border-radius:14px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.35);margin-top:14px}
+    .row{display:flex;gap:10px}
+    input[type="text"]{flex:1;background:#0b1220;border:1px solid #1f2937;border-radius:10px;color:var(--text);padding:12px 14px;outline:none}
+    input[type="text"]::placeholder{color:#64748b}
+    button{background:#0b1220;border:1px solid #1f2937;color:var(--text);padding:10px 14px;border-radius:10px;cursor:pointer}
+    button:hover{border-color:#334155}
+    .btn-accent{border-color:rgba(34,211,238,.6)}
+    .btn-danger{border-color:rgba(239,68,68,.6);color:#fecaca}
+    .controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .chips{display:flex;gap:6px}
+    .chip{padding:6px 10px;border:1px solid #1f2937;border-radius:999px;cursor:pointer;color:var(--muted)}
+    .chip.active{border-color:var(--accent);color:var(--accent);background:rgba(34,211,238,.08)}
+    .stats{margin-left:auto;display:flex;gap:12px;color:var(--muted);font-size:13px}
+    ul{list-style:none;margin:12px 0 0;padding:0}
+    li{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;padding:10px;border:1px solid #1f2937;border-radius:10px;margin-bottom:8px;background:#0b1220}
+    li.done .text{color:#64748b;text-decoration:line-through}
+    .text{padding:6px 8px;border-radius:8px;min-height:32px;display:flex;align-items:center}
+    .text[contenteditable="true"]{outline:2px solid rgba(34,211,238,.35);background:#0a1526}
+    .meta{font-size:12px;color:#94a3b8}
+    .actions{display:flex;gap:6px}
+    .checkbox{width:18px;height:18px;accent-color:var(--ok)}
+    .search{display:flex;gap:8px;margin-top:10px}
+    .empty{padding:24px;text-align:center;color:#94a3b8;border:1px dashed #1f2937;border-radius:12px;margin-top:12px}
+    .kbd{padding:2px 6px;border:1px solid #334155;border-radius:6px;background:#0b1220;color:#cbd5e1;font-size:12px}
+    @media (max-width:560px){ .stats{width:100%;order:3;margin-top:6px} .controls{flex-direction:column} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="title">
+      <h1>Task Tracker</h1>
+      <span class="badge">DOM • localStorage • Clean JS</span>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <input id="taskInput" type="text" placeholder="Add a task… (press Enter)" />
+        <button id="addBtn" class="btn-accent">Add</button>
+      </div>
+
+      <div class="search">
+        <input id="searchInput" type="text" placeholder="Search tasks…" />
+        <button id="clearSearch">Clear</button>
+      </div>
+
+      <div class="controls">
+        <div class="chips" id="filters">
+          <div class="chip active" data-filter="all">All</div>
+          <div class="chip" data-filter="active">Active</div>
+          <div class="chip" data-filter="completed">Completed</div>
+        </div>
+        <div class="stats" id="stats">
+          <span><strong id="countAll">0</strong> total</span>
+          <span><strong id="countActive">0</strong> active</span>
+          <span><strong id="countDone">0</strong> done</span>
+        </div>
+      </div>
+
+      <ul id="list"></ul>
+      <div id="emptyState" class="empty" style="display:none;">
+        No tasks yet. Tip: press <span class="kbd">Enter</span> to add quickly.
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button id="clearCompleted" class="btn-danger">Clear Completed</button>
+        <button id="exportJson">Export JSON</button>
+        <button id="importJson">Import JSON</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---------------- State & Storage ----------------
+    const LS_KEY = "task-tracker.v1";
+    const state = {
+      tasks: load(),
+      filter: "all",
+      search: ""
+    };
+
+    function load(){
+      try{ return JSON.parse(localStorage.getItem(LS_KEY)) ?? []; }
+      catch{ return []; }
+    }
+    function save(){ localStorage.setItem(LS_KEY, JSON.stringify(state.tasks)); }
+
+    // ---------------- DOM Refs ----------------
+    const els = {
+      input: document.getElementById("taskInput"),
+      addBtn: document.getElementById("addBtn"),
+      list: document.getElementById("list"),
+      filters: document.getElementById("filters"),
+      counts: {
+        all: document.getElementById("countAll"),
+        active: document.getElementById("countActive"),
+        done: document.getElementById("countDone"),
+      },
+      empty: document.getElementById("emptyState"),
+      clearCompleted: document.getElementById("clearCompleted"),
+      search: document.getElementById("searchInput"),
+      clearSearch: document.getElementById("clearSearch"),
+      exportJson: document.getElementById("exportJson"),
+      importJson: document.getElementById("importJson"),
+    };
+
+    // ---------------- Helpers ----------------
+    const uid = () => "t_" + Math.random().toString(36).slice(2,9);
+    const now = () => new Date().toISOString();
+    const fmtDate = iso => new Date(iso).toLocaleString();
+
+    function addTask(text){
+      const clean = String(text || "").trim();
+      if(!clean) return;
+      state.tasks.push({ id: uid(), text: clean, done: false, createdAt: now() });
+      save(); render(); els.input.value = ""; els.input.focus();
+    }
+
+    function setDone(id, done){
+      const t = state.tasks.find(t=>t.id===id);
+      if(!t) return;
+      t.done = !!done; save(); render();
+    }
+
+    function updateText(id, text){
+      const t = state.tasks.find(t=>t.id===id);
+      if(!t) return;
+      const clean = text.trim();
+      if(!clean){ removeTask(id); return; }
+      t.text = clean; save(); render();
+    }
+
+    function removeTask(id){
+      state.tasks = state.tasks.filter(t=>t.id!==id);
+      save(); render();
+    }
+
+    function clearCompleted(){
+      state.tasks = state.tasks.filter(t=>!t.done);
+      save(); render();
+    }
+
+    function filteredTasks(){
+      const q = state.search.toLowerCase().trim();
+      return state.tasks.filter(t=>{
+        const okFilter =
+          state.filter === "all" ||
+          (state.filter === "active" && !t.done) ||
+          (state.filter === "completed" && t.done);
+        const okSearch = !q || t.text.toLowerCase().includes(q);
+        return okFilter && okSearch;
+      });
+    }
+
+    // ---------------- Rendering ----------------
+    function render(){
+      const tasks = filteredTasks();
+      els.list.innerHTML = tasks.map(t => `
+        <li data-id="${t.id}" class="${t.done ? "done" : ""}">
+          <input class="checkbox" type="checkbox" ${t.done ? "checked" : ""} aria-label="Toggle done">
+          <div class="text" contenteditable="false" spellcheck="false" title="Double-click to edit">${escapeHtml(t.text)}</div>
+          <div class="actions">
+            <button class="edit">Edit</button>
+            <button class="del">Delete</button>
+          </div>
+          <div class="meta" style="grid-column:1 / -1;">Created: ${fmtDate(t.createdAt)}</div>
+        </li>
+      `).join("");
+
+      // counts
+      const total = state.tasks.length;
+      const done = state.tasks.filter(t=>t.done).length;
+      const active = total - done;
+      els.counts.all.textContent = total;
+      els.counts.done.textContent = done;
+      els.counts.active.textContent = active;
+
+      // empty state
+      els.empty.style.display = tasks.length ? "none" : "block";
+
+      // highlight active filter chip
+      [...els.filters.querySelectorAll(".chip")].forEach(chip=>{
+        chip.classList.toggle("active", chip.dataset.filter === state.filter);
+      });
+    }
+
+    // Prevent XSS in contenteditable/text
+    function escapeHtml(s){
+      return s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+    }
+
+    // ---------------- Events ----------------
+    els.addBtn.addEventListener("click", ()=> addTask(els.input.value));
+    els.input.addEventListener("keydown", e=>{
+      if(e.key==="Enter") { e.preventDefault(); addTask(els.input.value); }
+    });
+
+    els.filters.addEventListener("click", e=>{
+      const chip = e.target.closest(".chip");
+      if(!chip) return;
+      state.filter = chip.dataset.filter;
+      render();
+    });
+
+    els.search.addEventListener("input", e=>{
+      state.search = e.target.value;
+      render();
+    });
+    els.clearSearch.addEventListener("click", ()=>{
+      state.search = ""; els.search.value = ""; render();
+    });
+
+    els.clearCompleted.addEventListener("click", clearCompleted);
+
+    // --- FIXED: Proper toggle for Edit button (enter/exit & save) ---
+    els.list.addEventListener("click", (e) => {
+      const li = e.target.closest("li");
+      if (!li) return;
+      const id = li.dataset.id;
+
+      if (e.target.classList.contains("del")) {
+        removeTask(id);
+        return;
+      }
+
+      if (e.target.classList.contains("edit")) {
+        const txt = li.querySelector(".text");
+        if (txt.isContentEditable) {
+          // already editing -> save & exit
+          toggleEdit(li, false, "save");
+        } else {
+          // enter edit mode
+          toggleEdit(li, true);
+        }
+      }
+    });
+
+    els.list.addEventListener("change", e=>{
+      if(e.target.classList.contains("checkbox")){
+        const li = e.target.closest("li");
+        setDone(li.dataset.id, e.target.checked);
+      }
+    });
+
+    // Inline edit: dblclick to edit, Enter/Blur to save, Esc to cancel
+    els.list.addEventListener("dblclick", e=>{
+      const txt = e.target.closest(".text");
+      if(!txt) return;
+      toggleEdit(txt.closest("li"), true);
+    });
+
+    els.list.addEventListener("keydown", e=>{
+      const li = e.target.closest("li");
+      if(!li) return;
+      const txt = li.querySelector(".text");
+      if(e.key==="Enter" && txt.isContentEditable){
+        e.preventDefault();
+        toggleEdit(li, false, "save");
+      } else if(e.key==="Escape" && txt.isContentEditable){
+        e.preventDefault();
+        toggleEdit(li, false, "cancel");
+      }
+    });
+
+    els.list.addEventListener("blur", e=>{
+      const li = e.target.closest("li");
+      if(!li) return;
+      const txt = li.querySelector(".text");
+      if(txt && txt.isContentEditable){
+        toggleEdit(li, false, "save");
+      }
+    }, true);
+
+    function toggleEdit(li, on, mode){
+      const id = li.dataset.id;
+      const txt = li.querySelector(".text");
+      const editBtn = li.querySelector(".edit");
+      const original = state.tasks.find(t=>t.id===id)?.text ?? "";
+
+      if(on){
+        txt.setAttribute("contenteditable","true");
+        txt.focus();
+        placeCaretEnd(txt);
+        editBtn.textContent = "Save";
+      } else {
+        txt.removeAttribute("contenteditable");
+        editBtn.textContent = "Edit";
+        if(mode==="save"){
+          const next = txt.textContent;
+          if(next !== original) updateText(id, next);
+          else render();
+        } else if(mode==="cancel"){
+          // FIXED: don't escape on cancel; just restore original plain text
+          txt.textContent = original;
+          render();
+        }
+      }
+    }
+
+    function placeCaretEnd(el){
+      const r = document.createRange(); r.selectNodeContents(el); r.collapse(false);
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    }
+
+    // Export / Import JSON (simple)
+    els.exportJson.addEventListener("click", ()=>{
+      const blob = new Blob([JSON.stringify(state.tasks, null, 2)], {type:"application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement("a"), { href:url, download:"tasks-export.json" });
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+
+    els.importJson.addEventListener("click", ()=>{
+      const inp = Object.assign(document.createElement("input"), { type:"file", accept:"application/json" });
+      inp.addEventListener("change", ()=>{
+        const file = inp.files?.[0]; if(!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const arr = JSON.parse(String(reader.result));
+            if(!Array.isArray(arr)) throw new Error("Invalid file");
+            // basic shape validation
+            state.tasks = arr.filter(x => x && typeof x.id==="string" && typeof x.text==="string")
+                             .map(x => ({ id:x.id, text:x.text.trim(), done:!!x.done, createdAt:x.createdAt || now() }));
+            save(); render();
+          } catch (e) {
+            alert("Import failed: " + e.message);
+          }
+        };
+        reader.readAsText(file);
+      });
+      inp.click();
+    });
+
+    // First render
+    render();
+  </script>
+</body>
+</html>
