@@ -1,4 +1,5 @@
 for cart :
+
       Arrow functions: MAD, applyCoupon, computeLineTotal, processOrder.
       
       if/else + guards: Validate lines and customer fields.
@@ -24,3 +25,19 @@ for cart :
       email: null → intentionally empty (we print a note).
       
       phone: undefined → missing field (we print a warning).
+      
+for Student : 
+
+      Creation & mutation: push, splice, property updates
+      
+      Access/search: find, findIndex, filter
+      
+      Transforms: map (build report rows), computed fields (avg)
+      
+      Aggregation: reduce (in average)
+      
+      Ordering: sort by name and by computed average
+      
+      Loops: for...of, classic for
+      
+      Guards/validation: clean handling of invalid inputs
