@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <style>
+    .A{
+      background-color: yellow;
+    }
+    .B{
+      background-color: royalblue;
+    }
+
+
+  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+<button onclick="
+console.log('quantity = ' + quantity);
+">show Quanity</button>
+
+<Button onclick="
+quantity=quantity+1;
+console.log(quantity);">Add to cart</Button>
+
+<button onclick="
+quantity=quantity+2;
+console.log(quantity);">+2</button>
+
+<Button onclick="
+quantity=quantity+3;
+console.log(quantity);">+3</Button>
+
+<button onclick="
+quantity=0;
+console.log(quantity);">reset cart</button>
+
+<script>
+  let quantity = 0;
+</script>
+</body>
+</html>
