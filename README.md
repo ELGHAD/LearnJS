@@ -45,11 +45,7 @@ for Student :
 for Order Processor Demo
 
       This project is a **Node.js educational script** showing how to process a small e-commerce order while demonstrating essential **JavaScript core concepts**.
-      
-      ---
-      
       ## 🚀 Features
-      
       ✅ Demonstrates:
       - `null` vs `undefined` handling  
       - **Arrow functions** and **ternary operators**  
@@ -57,18 +53,13 @@ for Order Processor Demo
       - **Destructuring**, early returns, and guards  
       - Loops: `for...in`, `for...of`, `while`, `do...while`  
       - Control flow with `continue` and `break`  
-      - Optional chaining `?.` and nullish coalescing `??`
-      
+      - Optional chaining `?.` and nullish coalescing `?? 
       ✅ Business logic:
       - Coupon engine (`PERCENT10`, `FLAT20`)  
       - Shipping & tax calculation  
       - Loyalty points discount (10 pts → 10 MAD off)  
       - Payment retries simulated with `do...while`
-      
-      ---
-      
       ## 🧠 How It Works
-      
       1. **Customer data** includes intentional `null` and `undefined` values to show difference.  
       2. **Cart items** include valid and invalid lines (to test guards and `continue`).  
       3. Each valid item is processed:
@@ -79,7 +70,7 @@ for Order Processor Demo
       5. Payment simulated — success on second attempt.  
       6. Invoice summary printed to console.
       
-      ---
+ 
 
 
 
